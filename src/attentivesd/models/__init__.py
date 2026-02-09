@@ -1,3 +1,3 @@
-from attentivesd.models.cnn_attention import HybridSpliceModel
+from attentivesd.models.model import HybridSpliceModel
 
 __all__ = ["HybridSpliceModel"]

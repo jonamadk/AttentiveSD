@@ -13,9 +13,11 @@ class ResidualConvBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, kernel_size: int, dilation: int, dropout: float):
         super().__init__()
         padding = compute_padding(kernel_size, dilation)
-        self.conv1 = nn.Conv1d(in_ch, out_ch, kernel_size, padding=padding, dilation=dilation)
+        self.conv1 = nn.Conv1d(in_ch, out_ch, kernel_size,
+                               padding=padding, dilation=dilation)
         self.bn1 = nn.BatchNorm1d(out_ch)
-        self.conv2 = nn.Conv1d(out_ch, out_ch, kernel_size, padding=padding, dilation=dilation)
+        self.conv2 = nn.Conv1d(out_ch, out_ch, kernel_size,
+                               padding=padding, dilation=dilation)
         self.bn2 = nn.BatchNorm1d(out_ch)
         self.act = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
@@ -39,7 +41,8 @@ class CNNEncoder(nn.Module):
         blocks = []
         in_ch = 4
         for out_ch, kernel, dilation in zip(channels, kernel_sizes, dilations):
-            blocks.append(ResidualConvBlock(in_ch, out_ch, kernel, dilation, dropout))
+            blocks.append(ResidualConvBlock(
+                in_ch, out_ch, kernel, dilation, dropout))
             in_ch = out_ch
         self.net = nn.Sequential(*blocks)
         self.out_channels = in_ch
@@ -49,7 +52,8 @@ class CNNEncoder(nn.Module):
 
 
 def build_rope_cache(seq_len: int, head_dim: int, device: torch.device) -> torch.Tensor:
-    inv_freq = 1.0 / (10000 ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
+    inv_freq = 1.0 / \
+        (10000 ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
     positions = torch.arange(seq_len, device=device).float()
     freqs = torch.einsum("i,j->ij", positions, inv_freq)
     return torch.stack((freqs.sin(), freqs.cos()), dim=-1)
@@ -86,9 +90,12 @@ class MultiheadSelfAttentionRoPE(nn.Module):
         batch, seq_len, _ = x.shape
         qkv = self.qkv(x)
         q, k, v = torch.chunk(qkv, 3, dim=-1)
-        q = q.view(batch, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        k = k.view(batch, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        v = v.view(batch, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        q = q.view(batch, seq_len, self.num_heads,
+                   self.head_dim).transpose(1, 2)
+        k = k.view(batch, seq_len, self.num_heads,
+                   self.head_dim).transpose(1, 2)
+        v = v.view(batch, seq_len, self.num_heads,
+                   self.head_dim).transpose(1, 2)
 
         if self.use_rope:
             rope_cache = build_rope_cache(seq_len, self.head_dim, x.device)
@@ -100,7 +107,8 @@ class MultiheadSelfAttentionRoPE(nn.Module):
         attn = scores.softmax(dim=-1)
         attn = self.attn_dropout(attn)
         out = attn @ v
-        out = out.transpose(1, 2).contiguous().view(batch, seq_len, self.embed_dim)
+        out = out.transpose(1, 2).contiguous().view(
+            batch, seq_len, self.embed_dim)
         out = self.proj(out)
         return self.proj_dropout(out)
 
@@ -109,7 +117,8 @@ class TransformerBlock(nn.Module):
     def __init__(self, embed_dim: int, num_heads: int, mlp_dim: int, attn_dropout: float, proj_dropout: float, use_rope: bool):
         super().__init__()
         self.norm1 = nn.LayerNorm(embed_dim)
-        self.attn = MultiheadSelfAttentionRoPE(embed_dim, num_heads, attn_dropout, proj_dropout, use_rope)
+        self.attn = MultiheadSelfAttentionRoPE(
+            embed_dim, num_heads, attn_dropout, proj_dropout, use_rope)
         self.norm2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
             nn.Linear(embed_dim, mlp_dim),
@@ -132,7 +141,8 @@ class AttentionEncoder(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList(
             [
-                TransformerBlock(embed_dim, num_heads, mlp_dim, attn_dropout, proj_dropout, use_rope)
+                TransformerBlock(embed_dim, num_heads, mlp_dim,
+                                 attn_dropout, proj_dropout, use_rope)
                 for _ in range(num_layers)
             ]
         )
@@ -169,13 +179,17 @@ class HybridSpliceModel(nn.Module):
     def __init__(self, config: dict):
         super().__init__()
         attention = AttentionConfig(**config["attention"])
-        model_config = ModelConfig(attention=attention, **{k: v for k, v in config.items() if k != "attention"})
+        model_config = ModelConfig(
+            attention=attention, **{k: v for k, v in config.items() if k != "attention"})
         self.config = model_config
 
         self.mode = model_config.mode
         self.pooling = model_config.pooling
 
-        if self.mode in {"cnn", "cnn_attention"}:
+        # Determine if RoPE should be used based on mode
+        use_rope = self.mode == "cnn_attention_rope"
+
+        if self.mode in {"cnn", "cnn_attention", "cnn_attention_rope"}:
             self.cnn = CNNEncoder(
                 channels=model_config.conv_channels,
                 kernel_sizes=model_config.kernel_sizes,
@@ -188,7 +202,7 @@ class HybridSpliceModel(nn.Module):
             embed_dim = attention.hidden_dim
             self.input_proj = nn.Linear(4, embed_dim)
 
-        if self.mode in {"attention", "cnn_attention"}:
+        if self.mode in {"attention", "cnn_attention", "cnn_attention_rope"}:
             self.attn = AttentionEncoder(
                 embed_dim=embed_dim,
                 num_layers=attention.num_layers,
@@ -196,7 +210,7 @@ class HybridSpliceModel(nn.Module):
                 mlp_dim=attention.mlp_dim,
                 attn_dropout=attention.attn_dropout,
                 proj_dropout=attention.proj_dropout,
-                use_rope=attention.use_rope,
+                use_rope=use_rope,
             )
         else:
             self.attn = None
@@ -213,7 +227,7 @@ class HybridSpliceModel(nn.Module):
         return x[:, center, :]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.mode in {"cnn", "cnn_attention"}:
+        if self.mode in {"cnn", "cnn_attention", "cnn_attention_rope"}:
             x = x.transpose(1, 2)
             x = self.cnn(x)
             x = x.transpose(1, 2)
