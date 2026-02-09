@@ -33,6 +33,7 @@ class Trainer:
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.best_f1 = -1.0
+        self.start_epoch = 1
 
         self.loss_fn = nn.BCEWithLogitsLoss()
         self.optimizer = AdamW(self.model.parameters(), lr=self.config.lr, weight_decay=self.config.weight_decay)
@@ -41,6 +42,21 @@ class Trainer:
             batch_size=self.config.batch_size,
             num_workers=self.config.num_workers,
         )
+
+    def load_checkpoint(self, path: Path) -> None:
+        payload = torch.load(path, map_location="cpu")
+        state_dict = payload.get("state_dict") if isinstance(payload, dict) else None
+        if state_dict is None:
+            state_dict = payload
+        self.model.load_state_dict(state_dict)
+
+        if isinstance(payload, dict):
+            if "optimizer" in payload:
+                self.optimizer.load_state_dict(payload["optimizer"])
+            if "best_f1" in payload:
+                self.best_f1 = float(payload["best_f1"])
+            if "epoch" in payload:
+                self.start_epoch = int(payload["epoch"]) + 1
 
     def _resolve_device(self, device: str) -> torch.device:
         if device == "auto":
@@ -77,7 +93,7 @@ class Trainer:
         return epoch_loss / max(1, len(loader)), metrics
 
     def fit(self) -> None:
-        for epoch in range(1, self.config.epochs + 1):
+        for epoch in range(self.start_epoch, self.config.epochs + 1):
             train_loss, train_metrics = self._run_epoch(self.train_loader, train=True)
             val_loss, val_metrics = self._run_epoch(self.val_loader, train=False)
             print(
@@ -88,12 +104,28 @@ class Trainer:
 
             if self.config.save_last:
                 last_path = self.output_dir / "checkpoint_last.pt"
-                torch.save({"state_dict": self.model.state_dict(), "epoch": epoch}, last_path)
+                torch.save(
+                    {
+                        "state_dict": self.model.state_dict(),
+                        "optimizer": self.optimizer.state_dict(),
+                        "epoch": epoch,
+                        "best_f1": self.best_f1,
+                    },
+                    last_path,
+                )
 
             if self.config.save_best and val_metrics["f1"] > self.best_f1:
                 self.best_f1 = val_metrics["f1"]
                 best_path = self.output_dir / "checkpoint_best.pt"
-                torch.save({"state_dict": self.model.state_dict(), "epoch": epoch}, best_path)
+                torch.save(
+                    {
+                        "state_dict": self.model.state_dict(),
+                        "optimizer": self.optimizer.state_dict(),
+                        "epoch": epoch,
+                        "best_f1": self.best_f1,
+                    },
+                    best_path,
+                )
 
     def test(self) -> None:
         test_loss, test_metrics = self._run_epoch(self.test_loader, train=False)

@@ -48,6 +48,7 @@ def main() -> int:
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None)
+    parser.add_argument("--resume", default=None)
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
@@ -59,6 +60,8 @@ def main() -> int:
     model = HybridSpliceModel(config["model"])
 
     trainer = Trainer(model=model, data_module=data_module, config=config["train"])
+    if args.resume:
+        trainer.load_checkpoint(Path(args.resume))
     trainer.fit()
     trainer.test()
 
