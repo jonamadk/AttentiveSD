@@ -9,21 +9,22 @@ data:
   split: train
   val_fraction: 0.1
   max_samples: null
+  max_test_samples: null
 
 model:
-  mode: cnn_attention
+  mode: cnn_attention_rope # Options: cnn, cnn_attention, cnn_attention_rope
   conv_channels: [64, 128, 128]
   kernel_sizes: [9, 7, 5]
   dilations: [1, 2, 4]
-  dropout: 0.2
+  dropout: 0.3 # Increased from 0.2 to reduce overfitting
   attention:
     num_layers: 2
     num_heads: 4
     hidden_dim: 128
     mlp_dim: 256
-    use_rope: true
-    attn_dropout: 0.1
-    proj_dropout: 0.1
+    use_rope: true # This value is overridden by mode (true only for cnn_attention_rope)
+    attn_dropout: 0.2 # Increased from 0.1 to reduce overfitting
+    proj_dropout: 0.2 # Increased from 0.1 to reduce overfitting
   pooling: center
 
 train:
@@ -37,3 +38,6 @@ train:
   output_dir: outputs
   save_best: true
   save_last: true
+  early_stopping_patience: 10
+  grad_clip: 1.0
+  scheduler: plateau # Options: plateau, cosine, none

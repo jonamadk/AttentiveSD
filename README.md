@@ -8,6 +8,29 @@ AttentiveSD is a CNN-Attention hybrid for splice site prediction. It keeps the l
 - RoPE or learnable positional handling via attention configuration
 - CNN-only, CNN-Attention, and Attention-only ablations
 
+## Quickstart (local data)
+
+### Preprocess
+```bash
+PYTHONPATH=src python scripts/preprocess_data.py --dataset balanced --organism hs --site donor --split train
+PYTHONPATH=src python scripts/preprocess_data.py --dataset balanced --organism hs --site donor --split test
+```
+
+### Train
+```bash
+PYTHONPATH=src python scripts/train.py --dataset balanced --organism hs --site donor --mode cnn_attention
+```
+
+### Evaluate
+```bash
+PYTHONPATH=src python scripts/evaluate.py --checkpoint outputs/checkpoint_best.pt --dataset balanced --organism hs --site donor --mode cnn_attention
+```
+
+### One-shot pipeline
+```bash
+PYTHONPATH=src python scripts/main.py --dataset balanced --organism hs --site donor --mode cnn_attention
+```
+
 ## Quickstart
 1) Install dependencies:
 
@@ -28,6 +51,12 @@ PYTHONPATH=src python scripts/preprocess_data.py --dataset balanced --organism h
 PYTHONPATH=src python scripts/train.py --dataset balanced --organism hs --site donor --mode cnn_attention
 ```
 
+To resume after a crash, pass a checkpoint (typically outputs/checkpoint_last.pt):
+
+```bash
+PYTHONPATH=src python scripts/train.py --dataset balanced --organism hs --site donor --mode cnn_attention --resume outputs/checkpoint_last.pt
+```
+
 4) Evaluate (requires a checkpoint path):
 
 ```bash
@@ -45,5 +74,5 @@ Model modes:
 - cnn_attention: CNN + attention hybrid
 
 ## Data Notes
-The loader expects one-hot encoded sequences per line and matching label files in the local data/ folder following the balanced/imbalanced organism layout.
+The loader expects one-hot encoded sequences per line and matching label files in the local data/ folder following the balanced/imbalanced organism layout. If a label line contains a per-position vector, the center position is used as the binary label.
 
