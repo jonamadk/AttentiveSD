@@ -1,0 +1,39 @@
+seed: 13
+
+data:
+  root: data
+  processed_dir: data/processed
+  dataset: balanced
+  organism: hs
+  site: donor
+  split: train
+  val_fraction: 0.1
+  max_samples: null
+
+model:
+  mode: cnn_attention
+  conv_channels: [64, 128, 128]
+  kernel_sizes: [9, 7, 5]
+  dilations: [1, 2, 4]
+  dropout: 0.2
+  attention:
+    num_layers: 2
+    num_heads: 4
+    hidden_dim: 128
+    mlp_dim: 256
+    use_rope: true
+    attn_dropout: 0.1
+    proj_dropout: 0.1
+  pooling: center
+
+train:
+  batch_size: 64
+  epochs: 10
+  lr: 0.001
+  weight_decay: 0.0001
+  num_workers: 2
+  device: auto
+  log_every: 50
+  output_dir: outputs
+  save_best: true
+  save_last: true
