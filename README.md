@@ -41,15 +41,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Interactive Pipeline (Recommended)
+### How to Run the Models
 
-Run the complete pipeline with interactive prompts:
+Run the complete interactive pipeline with a single command:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/main.py
 ```
 
-This will guide you through:
+This interactive pipeline will guide you through:
 1. **Data Processing**: Automatically preprocesses train and test splits
 2. **Dataset Info**: Shows available training and test samples
 3. **Sample Selection**: Choose number of training samples (or use all)
@@ -75,57 +75,6 @@ Select model architecture:
   4) all                - Train and evaluate all models sequentially
 
 Enter choice (1/2/3/4): 3
-```
-
-### Command-Line Usage
-
-#### Preprocess Only
-```bash
-# Train split
-PYTHONPATH=src .venv/bin/python scripts/preprocess_data.py \
-  --dataset balanced --organism hs --site donor --split train
-
-# Test split
-PYTHONPATH=src .venv/bin/python scripts/preprocess_data.py \
-  --dataset balanced --organism hs --site donor --split test
-```
-
-#### Train Single Model
-```bash
-# Train with default settings
-PYTHONPATH=src .venv/bin/python scripts/train.py \
-  --dataset balanced --organism hs --site donor \
-  --mode cnn_attention_rope
-
-# Train with custom hyperparameters
-PYTHONPATH=src .venv/bin/python scripts/train.py \
-  --dataset balanced --organism hs --site donor \
-  --mode cnn_attention_rope \
-  --epochs 20 --batch-size 128 --lr 0.0005 \
-  --max-samples 10000 --max-test-samples 2000
-```
-
-#### Resume Training
-```bash
-PYTHONPATH=src .venv/bin/python scripts/train.py \
-  --mode cnn_attention_rope --resume outputs/cnn_attention_rope/checkpoint_last.pt
-```
-
-#### Evaluate Saved Model
-```bash
-PYTHONPATH=src .venv/bin/python scripts/evaluate.py \
-  --checkpoint outputs/cnn_attention_rope/checkpoint_best.pt \
-  --dataset balanced --organism hs --site donor \
-  --mode cnn_attention_rope
-```
-
-#### One-Command Pipeline (Non-Interactive)
-```bash
-# Specific model
-PYTHONPATH=src .venv/bin/python scripts/main.py --mode cnn
-
-# All models
-PYTHONPATH=src .venv/bin/python scripts/main.py --mode all
 ```
 
 ## Output Structure
