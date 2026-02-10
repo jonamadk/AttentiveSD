@@ -67,6 +67,8 @@ def main() -> int:
     model_mode = config["model"]["mode"]
     model_output_dir = Path(base_output_dir) / model_mode
     config["train"]["output_dir"] = str(model_output_dir)
+    # Add mode to train config for logging
+    config["train"]["mode"] = model_mode
 
     print(f"\n{'='*80}")
     print(f"Model: {model_mode}")
@@ -75,6 +77,9 @@ def main() -> int:
 
     data_module = CnnSpliceDataModule(config["data"])
     model = HybridSpliceModel(config["model"])
+
+    # DEBUG: Verify mode is in config
+    # print(f"DEBUG: config['train']['mode'] = {config['train'].get('mode', 'NOT SET')}")
 
     trainer = Trainer(model=model, data_module=data_module,
                       config=config["train"])
